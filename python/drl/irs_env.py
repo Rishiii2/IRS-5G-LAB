@@ -82,8 +82,8 @@ class IRSEnv(gym.Env):
         # 1. Map action to a phase delta (max pi/4 radians per step)
         max_delta = np.pi / 4
         self.current_phases += action * max_delta
-        # Wrap phases to [-pi, pi]
-        self.current_phases = np.angle(np.exp(1j * self.current_phases))
+        # Wrap phases to [-pi, pi] efficiently without complex exponentials
+        self.current_phases = (self.current_phases + np.pi) % (2 * np.pi) - np.pi
         self.irs_panel.phases = self.current_phases
         Phi = self.irs_panel.get_reflection_matrix()
         

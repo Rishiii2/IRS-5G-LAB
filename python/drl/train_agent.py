@@ -17,7 +17,7 @@ def main():
     
     agent = SACAgent(state_dim=state_dim, action_dim=action_dim)
     
-    num_episodes = 50
+    num_episodes = 1000
     batch_size = 64
     
     rewards_history = []
