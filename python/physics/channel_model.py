@@ -78,6 +78,15 @@ class ChannelEnvironment:
         phase = k * (dx * direction[0] + dz * direction[2])
         return np.exp(-1j * phase).flatten()
 
+    def reset_fading(self, irs_elements_N):
+        """
+        Resets the small-scale fading (NLoS) realizations for the environment.
+        Should be called at the beginning of an episode to simulate a static block-fading room.
+        """
+        self.h_nlos_bs = (np.random.randn(irs_elements_N) + 1j * np.random.randn(irs_elements_N)) / np.sqrt(2)
+        self.h_nlos_ue = (np.random.randn(irs_elements_N) + 1j * np.random.randn(irs_elements_N)) / np.sqrt(2)
+        self.h_d_nlos = (np.random.randn() + 1j * np.random.randn()) / np.sqrt(2)
+
     def get_channels(self, irs_elements_N):
         """
         Returns the G matrix (BS->IRS) and h_r vector (IRS->UE).
@@ -96,11 +105,12 @@ class ChannelEnvironment:
         
         # 3. Add slight fading (Rician with high K factor)
         K = 10.0 # 10dB
-        h_nlos_bs = (np.random.randn(irs_elements_N) + 1j * np.random.randn(irs_elements_N)) / np.sqrt(2)
-        h_nlos_ue = (np.random.randn(irs_elements_N) + 1j * np.random.randn(irs_elements_N)) / np.sqrt(2)
         
-        fading_bs_irs = np.sqrt(K / (K + 1)) * a_bs_irs + np.sqrt(1 / (K + 1)) * h_nlos_bs
-        fading_irs_ue = np.sqrt(K / (K + 1)) * a_irs_ue + np.sqrt(1 / (K + 1)) * h_nlos_ue
+        if not hasattr(self, 'h_nlos_bs') or len(self.h_nlos_bs) != irs_elements_N:
+            self.reset_fading(irs_elements_N)
+            
+        fading_bs_irs = np.sqrt(K / (K + 1)) * a_bs_irs + np.sqrt(1 / (K + 1)) * self.h_nlos_bs
+        fading_irs_ue = np.sqrt(K / (K + 1)) * a_irs_ue + np.sqrt(1 / (K + 1)) * self.h_nlos_ue
         
         # 4. Combine
         G = np.sqrt(pl_bs_irs) * fading_bs_irs
@@ -109,6 +119,6 @@ class ChannelEnvironment:
         # Direct link (BS -> UE) - assuming heavily blocked
         d_bs_ue = self._distance(self.bs_pos, self.ue_pos)
         pl_bs_ue = self.calculate_free_space_path_loss(d_bs_ue) * 1e-6 # 60dB blockage penalty
-        h_d = np.sqrt(pl_bs_ue) * (np.random.randn() + 1j * np.random.randn()) / np.sqrt(2)
+        h_d = np.sqrt(pl_bs_ue) * self.h_d_nlos
         
         return G, h_r, h_d

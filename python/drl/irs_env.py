@@ -44,6 +44,9 @@ class IRSEnv(gym.Env):
             np.random.uniform(20, self.room_size)
         ])
         
+        # Reset the environment fading for the new episode
+        self.env_model.reset_fading(self.N)
+        
         return self._get_obs(), {}
 
     def _get_obs(self):
